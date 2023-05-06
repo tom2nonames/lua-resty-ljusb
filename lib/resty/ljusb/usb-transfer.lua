@@ -78,7 +78,7 @@ function usb_transfer:set_data(data, not_control_setup)
     end
 
     local setup_size = ffi.C.LIBUSB_CONTROL_SETUP_SIZE
-    if not not_control_setup then
+    if not_control_setup then
         setup_size = 0
     end
 
@@ -187,7 +187,7 @@ function usb_transfer:fill_bulk_stream(endpoint, stream_id, data)
 end
 
 function usb_transfer:fill_iso(endpoint, num_iso_packets, data)
-    self:set_data(data)
+    self:set_data(data, true)
     local t = self:get_raw_handle()
     t.endpoint = endpoint
     t.num_iso_packets = num_iso_packets
@@ -196,7 +196,7 @@ function usb_transfer:fill_iso(endpoint, num_iso_packets, data)
 end
 
 function usb_transfer:fill_interrupt(endpoint, data)
-    self:set_data(data)
+    self:set_data(data, true)
     local t = self:get_raw_handle()
     t.endpoint = endpoint
     t.type = core.LIBUSB_TRANSFER_TYPE_INTERRUPT
