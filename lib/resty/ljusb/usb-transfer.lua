@@ -60,7 +60,7 @@ function usb_transfer:data()
     return ffi.string(t.buffer + ffi.C.LIBUSB_CONTROL_SETUP_SIZE, t.actual_length)
 end
 
-function usb_transfer:set_data(data)
+function usb_transfer:set_data(data, not_control_setup)
     local t = self:get_raw_handle()
 
     if data == nil and t.length >= ffi.C.LIBUSB_CONTROL_SETUP_SIZE then
@@ -77,19 +77,26 @@ function usb_transfer:set_data(data)
         data_len = data:len()
     end
 
-    local len = ffi.C.LIBUSB_CONTROL_SETUP_SIZE + data_len
+    local setup_size = ffi.C.LIBUSB_CONTROL_SETUP_SIZE
+    if not not_control_setup then
+        setup_size = 0
+    end
+
+    local len = setup_size + data_len
 
     if t.length < len then
         t.buffer = ffi.gc(ffi.C.malloc(len), ffi.C.free)
     end
     if data:len() > 0 then
-        ffi.copy(t.buffer + ffi.C.LIBUSB_CONTROL_SETUP_SIZE, data, data:len())
+        ffi.copy(t.buffer + setup_size, data, data:len())
     end
 
     t.length = len
-    t.actual_length = data:len()
-    t.buffer[6] = band(data_len, 0xff)
-    t.buffer[7] = band(rshift(data_len, 8), 0xff)
+    if not not_control_setup then
+        t.actual_length = data:len()
+        t.buffer[6] = band(data_len, 0xff)
+        t.buffer[7] = band(rshift(data_len, 8), 0xff)
+    end
     return self
 end
 
@@ -164,7 +171,7 @@ function usb_transfer:fill_control(bmRequestType, bRequest, wValue, wIndex, data
 end
 
 function usb_transfer:fill_bulk(endpoint, data)
-    self:set_data(data)
+    self:set_data(data, true)
     local t = self:get_raw_handle()
     t.endpoint = endpoint
     t.type = core.LIBUSB_TRANSFER_TYPE_BULK
