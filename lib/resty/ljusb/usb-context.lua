@@ -5,6 +5,7 @@ local bit = require'bit'
 local usb_device_list = require "ljusb.device.list"
 local usb_device_handle = require "ljusb.device.handle"
 local usb_transfer = require "ljusb.transfer"
+local usb_hotplug  = require "ljusb.hotplug"
 
 ffi.cdef[[
 typedef struct ljusb_context {
@@ -15,7 +16,9 @@ typedef struct ljusb_context {
 ffi.metatype('struct ljusb_context', {
     __gc = function(t)
         if t.handle ~= nil then
-            core.libusb_close(t.handle[0])
+            if tostring(ffi.typeof(t.handle[0]) == "ctype<struct libusb_context *>") then
+                local ok, err = core.libusb_exit(t.handle[0])
+            end
             t.handle[0] = nil
         end
     end
@@ -30,17 +33,23 @@ usb_context.get_device_list = usb_device_list.__new
 usb_context.iterate_devices = usb_device_list.__iterate
 usb_context.iterate_devices_by_vid_pid = usb_device_list.__iterate_by_vid_pid
 usb_context.new_transfer = usb_transfer.__new
+usb_context.new_hotplug  = usb_hotplug.__new
 
 function usb_context:__tostring()
     return "usb_context"
 end
 
-function usb_context.__new()
+function usb_context.__new(context)
+
     local ctx = {
         ljusb_context = ffi.new("ljusb_context"),
     }
 
-    assert(core.libusb_init(ctx.ljusb_context.handle) == ffi.C.LIBUSB_SUCCESS)
+    if context then
+        ctx.ljusb_context.handle[0] = context
+    else
+        assert(core.libusb_init(ctx.ljusb_context.handle) == ffi.C.LIBUSB_SUCCESS)
+    end
 
     return setmetatable(ctx, usb_context)
 end
@@ -96,7 +105,9 @@ function usb_context:pool(time_seconds)
     local tv = ffi.new'struct timeval[1]'
     tv[0].tv_sec = time_seconds or 0
     tv[0].tv_usec = 0
-    core.libusb_handle_events_timeout_completed(self:get_raw_handle(), tv, nil)
+    local completed = ffi.new("int[1]", 0)
+    local ok, err = core.libusb_handle_events_timeout_completed(self:get_raw_handle(), tv, completed)
+    return ok, err, completed[0]
 end
 
 function usb_context:error_string(code)
