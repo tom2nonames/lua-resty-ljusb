@@ -1,5 +1,5 @@
 package = "lua-resty-ljusb"
-version = "1.0.0-0"
+version = "1.0.0-1"
 source = {
    url = "git://github.com/tom2nonames/lua-resty-ljusb"
 }
@@ -25,5 +25,6 @@ build = {
       ["ljusb.device.list"]   = "lib/resty/ljusb/usb-device-list.lua",
       ["ljusb.device"]        = "lib/resty/ljusb/usb-device.lua",
       ["ljusb.transfer"]      = "lib/resty/ljusb/usb-transfer.lua",
+      ["ljusb.hotplug"]       = "lib/resty/ljusb/usb-hotplug.lua",
    }
 }
